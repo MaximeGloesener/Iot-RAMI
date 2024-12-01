@@ -1,0 +1,6 @@
+#!/usr/bin/env sh
+. "$(dirname -- "$0")/_/husky.sh"
+
+npm run lint
+VITE_APP_ENV=development npm run command build
+rm -rf ./dist
