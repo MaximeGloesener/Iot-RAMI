@@ -443,6 +443,11 @@ class MqttServer {
     return new Promise(async (resolve, reject) => {
       let responseReceived: string | null = null;
 
+      // S'assurer d'être souscrit au topic de réponse
+      const responseTopic = this.getTopicForHearingTheSensor(topicFromDB);
+      await this.subscribeTopic(responseTopic);  // Ajoutez cette ligne
+      
+
       const handleResponse = (response: string) => {
         responseReceived = response;
         cleanup();
@@ -459,6 +464,10 @@ class MqttServer {
         try {
           const parsedMessage = JSON.parse(messageString);
           const ans = parsedMessage[MESSAGE_FIELDS.ANS];
+          console.log('Expected topic:', this.getTopicForHearingTheSensor(topicFromDB)); // Debug log
+          console.log('Actual topic:', topic); // Debug log
+          console.log('Answer received:', ans); // Debug log
+          
           if (this.getTopicForHearingTheSensor(topicFromDB) === topic) {
             if (ans === RESPONSES.PONG) {
               handleResponse(RESPONSES.PONG);

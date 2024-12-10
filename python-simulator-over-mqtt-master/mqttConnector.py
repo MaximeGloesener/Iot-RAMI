@@ -1,19 +1,21 @@
 import paho.mqtt.client as mqtt
 import random
+import ssl
 from brokerInformator import BrokerInformator
 from datetime import datetime
+import certifi
 
+ssl.create_default_context(cafile=certifi.where())
 
 class MqttConnector:
 
     def __init__(self, broker_info):
-
         # Gather All broker information from BrokerInformator
-        self.broker_address =  BrokerInformator.get_url(broker_info)
+        self.broker_address = BrokerInformator.get_url(broker_info)
         self.port = BrokerInformator.get_port(broker_info)
         self.username = BrokerInformator.get_username(broker_info)
         self.password = BrokerInformator.get_password(broker_info)
-        self.client_id = "python-client-{}".format(random.randint(1, 10**10))  # Générer l'ID client unique (optionnal)
+        self.client_id = "python-client-{}".format(random.randint(1, 10**10))
 
         # Check if the connection should be over WebSockets        
         if BrokerInformator.get_ws(broker_info):
@@ -31,7 +33,11 @@ class MqttConnector:
             self.client.username_pw_set(self.username, self.password)
 
             if BrokerInformator.get_tls(broker_info):
-                self.client.tls_set()  # Configure TLS (You need to know if you need to use tls or not)
+                self.client.tls_set(
+                    ca_certs=certifi.where(),
+                    cert_reqs=ssl.CERT_REQUIRED,
+                    tls_version=ssl.PROTOCOL_TLS,
+                )
 
     # ---------------------------------------------------- ALL EVENTS ----------------------------------------------------
 
