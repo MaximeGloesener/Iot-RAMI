@@ -21,7 +21,7 @@ VITE_APP_ENV=dev npm run command dev
 
 #### Etape 3: simuler le capteur
 
-ALler dans le dossier "python-simulator-over-mqtt-master" et lancer la commande:
+Aller dans le dossier "python-simulator-over-mqtt-master" et lancer la commande:
 
 ```bash
 python3 ./mqttCliApp.py sensor hivemq
@@ -44,7 +44,7 @@ Ces étapes permettent de simuler le comportement d'un capteur et de récupérer
 
 
 Ce qu'il faut faire:
-- Comprendre comment la simulation envoie les données dans l'interface et faire pareil mais avec des vraies données récupérées depuis l'arduino.
+- Comprendre comment la simulation envoie les données dans l'interface et faire pareil mais avec des vraies données récupérées depuis l'arduino. En pratique déjà fait par un stagiaire donc voir étape suivante.
 
 
 ### Ecg
@@ -56,3 +56,5 @@ un stagiaire a déjà implémenté la com avec esp et interface ici:
 Le code est là: [https://github.com/MaximeGloesener/Iot-RAMI/tree/main/sensors-over-mqtt-master/esp32-mqtt/rami1_esp32_AD8232_ecg](https://github.com/MaximeGloesener/Iot-RAMI/tree/main/sensors-over-mqtt-master/esp32-mqtt/rami1_esp32_AD8232_ecg)
 
 Il permet de communiquer avec mqtt avec le serveur donc normalement ça devrait run.
+
+Il suffit juste de comprendre le code et tester avec arduino.
