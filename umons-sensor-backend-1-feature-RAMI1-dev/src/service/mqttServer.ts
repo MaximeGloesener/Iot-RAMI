@@ -12,6 +12,7 @@ import db from "@db/index";
 import { Sensor as SensorType } from "@/types/sensor";
 import { BrokerInfo } from "@/types/mqttConstants";
 import SensorOverMqtt from "@/service/sensorsOverMqtt";
+import KafkaService from "@/service/kafkaService";
 const DB: any = db;
 const { Sensor } = DB;
 // --- end of model import
@@ -58,6 +59,8 @@ class MqttServer {
    */
   private async connectBroker(BROKER_INFO: BrokerInfo): Promise<void> {
     try {
+      console.log('🔄 [connectBroker] Démarrage connexion MQTT');
+      
       const connectOptions: mqtt.IClientOptions = {
         clientId: "RAMI1-Server",
         username: BROKER_INFO.username,
@@ -65,15 +68,36 @@ class MqttServer {
         port: BROKER_INFO.port,
       };
 
-      // ALL EVENTS will be dealt with in the MqttServer.ts file as well as the way the server publish MQTT messages
-      await this.attachEventHandlers();
-
+      // Créer le client MQTT
       this.mqttClient = mqtt.connect(
         `mqtts://${BROKER_INFO.url}`,
         connectOptions
-      ); // USE mqtts = mqtt + tls
+      );
+
+      // Attacher les handlers AVANT la connexion
+      this.mqttClient.on('connect', () => {
+        console.log('🟢 [MQTT] Connecté au broker');
+        this.handleConnect();
+      });
+
+      // Handler de messages - avec debug explicite
+      this.mqttClient.on('message', (topic: string, message: Buffer) => {
+        console.log('⬇️ [MQTT] ENTRÉE DANS LE HANDLER DE MESSAGE');
+        console.log('📨 [MQTT] Topic:', topic);
+        console.log('📨 [MQTT] Message:', message.toString());
+        this.handleMessageReceivedFromSensor(topic, message);
+      });
+
+      // Handler d'erreur
+      this.mqttClient.on('error', (error) => {
+        console.error('❌ [MQTT] Erreur:', error);
+      });
+
+      console.log('✅ [connectBroker] Client MQTT initialisé et handlers attachés');
+
     } catch (error) {
-      this.handleErrorMqtt(error as Error);
+      console.error('❌ [connectBroker] Erreur:', error);
+      throw error;
     }
   }
 
@@ -134,26 +158,6 @@ class MqttServer {
   }
 
   /**
-   * Attaches event handlers to the MQTT client.
-   *
-   * @return {Promise<void>}
-   */
-  private async attachEventHandlers() {
-    await this.manageEventHandlers("on");
-    //console.log("La gestion des événements MQTT a été activée!");
-  }
-
-  /**
-   * Removes event handlers from the MQTT client.
-   *
-   * @return {Promise<void>}
-   */
-  private async removeEventHandlers() {
-    await this.manageEventHandlers("removeListener");
-    console.log("La gestions des événements MQTT a été désactivée!");
-  }
-
-  /**
    * Handles the MQTT connect event. Initializes sensors and subscribes to their topics.
    *
    * @return {Promise<void>}
@@ -185,28 +189,50 @@ class MqttServer {
    * @param {Buffer} message - The message payload.
    * @return {Promise<void>}
    */
-  private async handleMessageReceivedFromSensor(
-    topic: string,
-    message: Buffer
-  ) {
-    // THE SERVER IS ONLY INTEREST IN THE VALUES SENT BY THE SENSOR, it does not care about the answers of the sensor
-    // (only the mqtt Client on Websockets is intesrest in those)
-    // THAT IS WHY HERE WE DO NOT DEAL WITH THE ANSWER CASE
+  private async handleMessageReceivedFromSensor(topic: string, message: Buffer) {
     try {
       const messageString = message.toString();
+      console.log('🔍 [MQTT] Message reçu:', messageString);
+      
       const parsedMessage = JSON.parse(messageString);
-      //console.log(`NEW MESSAGE: ${messageString}`)
+      
+      // Si c'est une réponse à une commande, on l'ignore
+      if (parsedMessage.ans) {
+        console.log('ℹ️ [MQTT] Message de contrôle ignoré:', parsedMessage.ans);
+        return;
+      }
 
-      const timestamp = parsedMessage[MESSAGE_FIELDS.TIMESTAMP];
-      const value = parsedMessage[MESSAGE_FIELDS.VALUE];
-      const sensorId = this.getSensorIdUsingTopic(topic);
-
-      if (value !== undefined && !isNaN(Number(value)) && sensorId) {
-        await createSensorData(sensorId, timestamp, parseFloat(value));
-        //console.log(`Message received from ${topic}: ${messageString} => for ${sensorId} addeed in the database !`);
+      // Si c'est une donnée de capteur
+      if (parsedMessage.value !== undefined) {
+        const sensorId = this.getSensorIdUsingTopic(topic);
+        
+        if (sensorId) {
+          try {
+            // Sauvegarde en base de données
+            await createSensorData(sensorId, parsedMessage.timestamp, parseFloat(parsedMessage.value));
+            console.log('💾 [DB] Donnée sauvegardée pour le capteur:', sensorId);
+            
+            // Tentative de publication Kafka (mais on ne bloque pas si ça échoue)
+            try {
+              const kafkaService = await KafkaService.getInstance();
+              await kafkaService.publishSensorData('sensor-data', {
+                sensorId,
+                timestamp: parsedMessage.timestamp,
+                value: parseFloat(parsedMessage.value),
+                topic
+              });
+              console.log('📨 [Kafka] Donnée publiée avec succès');
+            } catch (kafkaError) {
+              console.warn('⚠️ [Kafka] Erreur de publication (non bloquante):', kafkaError);
+            }
+          } catch (dbError) {
+            console.error('❌ [DB] Erreur de sauvegarde:', dbError);
+            throw dbError;
+          }
+        }
       }
     } catch (error) {
-      this.handleErrorMqtt(error as Error);
+      console.error('❌ [MQTT] Erreur de traitement:', error);
     }
   }
 
@@ -230,23 +256,24 @@ class MqttServer {
    */
   private async subscribeTopic(topic: string): Promise<void> {
     try {
+      console.log('🔄 [subscribeTopic] Tentative de souscription au topic:', topic);
+      console.log('📡 [subscribeTopic] État de la connexion MQTT:', this.mqttClient?.connected);
+      
       if (this.mqttClient?.connected) {
         await new Promise<void>((resolve, reject) => {
           this.mqttClient?.subscribe(topic, (err) => {
             if (err) {
+              console.error('❌ [subscribeTopic] Erreur de souscription:', err);
               reject(err);
             } else {
+              console.log('✅ [subscribeTopic] Souscription réussie au topic:', topic);
               resolve();
             }
           });
         });
-        // console.log(`Server is subscribed to topic: ${topic}`);
-      } else {
-        throw new Error(
-          "MQTT client is not connected but your are trying to subscribe a topic."
-        );
       }
     } catch (err) {
+      console.error('❌ [subscribeTopic] Erreur:', err);
       this.handleErrorMqtt(err as Error);
     }
   }
@@ -353,6 +380,11 @@ class MqttServer {
   public getTopicForHearingTheSensorOnWebClientSide(
     topicFromDB: string
   ): string {
+    console.log('🔍 [getTopicForHearingTheSensorOnWebClientSide]', {
+      topicFromDB,
+      suffix: TOPICS.HEARING_THE_SENSOR,
+      result: `${topicFromDB}${TOPICS.HEARING_THE_SENSOR}`
+    });
     return this.getTopicForHearingTheSensor(topicFromDB);
   }
 
@@ -365,9 +397,9 @@ class MqttServer {
    * @return {Promise<void>}
    */
   public async subscribeServer(topicFromDB: string) {
-    await this.subscribeTopic(
-      this.getTopicForHearingTheSensor(topicFromDB) // I want to hear what the sensor say
-    );
+    const fullTopic = this.getTopicForHearingTheSensor(topicFromDB);
+    console.log('🔄 [subscribeServer] Souscription au topic:', fullTopic);
+    await this.subscribeTopic(fullTopic);
   }
 
   /**
@@ -420,6 +452,7 @@ class MqttServer {
    * @return {Promise<void>}
    */
   public async sendStartSignal(topicFromDB: string) {
+    console.log('🚀 [sendStartSignal] Envoi du signal START au topic:', topicFromDB);
     await this.publishCommandToSensor(topicFromDB, COMMANDS.START);
   }
 
