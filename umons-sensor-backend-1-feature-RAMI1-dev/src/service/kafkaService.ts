@@ -2,9 +2,9 @@ import { Kafka, Producer, Consumer } from 'kafkajs';
 
 class KafkaService {
   private static instance: KafkaService;
-  private kafka: Kafka;
-  private producer: Producer;
-  private consumer: Consumer;
+  private kafka!: Kafka;
+  private producer!: Producer;
+  private consumer!: Consumer;
 
   private constructor() {
     console.log('🚀 Initializing Kafka Service...');
@@ -23,7 +23,7 @@ class KafkaService {
   private async connectToKafka(): Promise<void> {
     try {
       console.log('🔄 [Kafka] Tentative de connexion...');
-      
+
       this.kafka = new Kafka({
         clientId: 'sensor-app',
         brokers: ['kafka:9092'],
@@ -35,7 +35,7 @@ class KafkaService {
 
       this.producer = this.kafka.producer();
       await this.producer.connect();
-      
+
       console.log('✅ [Kafka] Connexion établie');
     } catch (error) {
       console.error('❌ [Kafka] Erreur de connexion:', error);
@@ -47,7 +47,7 @@ class KafkaService {
     try {
       await this.producer.connect();
       console.log('✅ Kafka Producer connected successfully');
-      
+
       await this.consumer.connect();
       console.log('✅ Kafka Consumer connected successfully');
     } catch (error) {
@@ -98,7 +98,7 @@ class KafkaService {
     try {
       await this.producer.disconnect();
       console.log('👋 Kafka Producer disconnected');
-      
+
       await this.consumer.disconnect();
       console.log('👋 Kafka Consumer disconnected');
     } catch (error) {

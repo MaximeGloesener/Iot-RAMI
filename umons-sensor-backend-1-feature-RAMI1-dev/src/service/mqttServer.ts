@@ -60,7 +60,7 @@ class MqttServer {
   private async connectBroker(BROKER_INFO: BrokerInfo): Promise<void> {
     try {
       console.log('🔄 [connectBroker] Démarrage connexion MQTT');
-      
+
       const connectOptions: mqtt.IClientOptions = {
         clientId: "RAMI1-Server",
         username: BROKER_INFO.username,
@@ -127,7 +127,7 @@ class MqttServer {
    * @return {Promise<void>}
    */
   private async disconnectBroker(): Promise<void> {
-    await this.removeEventHandlers();
+    await this.manageEventHandlers("removeListener");
     if (this.mqttClient) {
       await new Promise<void>((resolve, reject) =>
         this.mqttClient?.end(false, (err) => (err ? reject(err) : resolve()))
@@ -177,7 +177,7 @@ class MqttServer {
    */
   private async handleDisconnect() {
     this.removeAllSensorsAndUnsubscribeTheirTopic();
-    this.removeEventHandlers();
+    this.manageEventHandlers("removeListener");
     //console.log("Déconnexion du broker! => TENTATIVE DE RECONNEXION");
     await this.reconnectBroker();
   }
@@ -193,9 +193,9 @@ class MqttServer {
     try {
       const messageString = message.toString();
       console.log('🔍 [MQTT] Message reçu:', messageString);
-      
+
       const parsedMessage = JSON.parse(messageString);
-      
+
       // Si c'est une réponse à une commande, on l'ignore
       if (parsedMessage.ans) {
         console.log('ℹ️ [MQTT] Message de contrôle ignoré:', parsedMessage.ans);
@@ -205,13 +205,13 @@ class MqttServer {
       // Si c'est une donnée de capteur
       if (parsedMessage.value !== undefined) {
         const sensorId = this.getSensorIdUsingTopic(topic);
-        
+
         if (sensorId) {
           try {
             // Sauvegarde en base de données
             await createSensorData(sensorId, parsedMessage.timestamp, parseFloat(parsedMessage.value));
             console.log('💾 [DB] Donnée sauvegardée pour le capteur:', sensorId);
-            
+
             // Tentative de publication Kafka (mais on ne bloque pas si ça échoue)
             try {
               const kafkaService = await KafkaService.getInstance();
@@ -258,7 +258,7 @@ class MqttServer {
     try {
       console.log('🔄 [subscribeTopic] Tentative de souscription au topic:', topic);
       console.log('📡 [subscribeTopic] État de la connexion MQTT:', this.mqttClient?.connected);
-      
+
       if (this.mqttClient?.connected) {
         await new Promise<void>((resolve, reject) => {
           this.mqttClient?.subscribe(topic, (err) => {
@@ -479,7 +479,7 @@ class MqttServer {
       // S'assurer d'être souscrit au topic de réponse
       const responseTopic = this.getTopicForHearingTheSensor(topicFromDB);
       await this.subscribeTopic(responseTopic);  // Ajoutez cette ligne
-      
+
 
       const handleResponse = (response: string) => {
         responseReceived = response;
@@ -500,7 +500,7 @@ class MqttServer {
           console.log('Expected topic:', this.getTopicForHearingTheSensor(topicFromDB)); // Debug log
           console.log('Actual topic:', topic); // Debug log
           console.log('Answer received:', ans); // Debug log
-          
+
           if (this.getTopicForHearingTheSensor(topicFromDB) === topic) {
             if (ans === RESPONSES.PONG) {
               handleResponse(RESPONSES.PONG);

@@ -125,6 +125,7 @@ const createSensorData = async (
       time: timestamp,
       value: value,
     });
+    console.log(`✅ [DB] Donnée insérée avec succès pour le capteur ${idSensor} à ${timestamp} avec une valeur de ${value}`);
   } catch (error) {
     throw new ServerErrorException("Server error !", "server.error");
   }

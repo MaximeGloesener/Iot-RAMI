@@ -6,7 +6,8 @@
     "target": "esnext",
     /* Specify ECMAScript target version: 'ES3' (default), 'ES5', 'ES2015', 'ES2016', 'ES2017','ES2018', 'ES2019' or 'ESNEXT'. */
     "lib": [
-      "esnext"
+      "esnext",
+      "dom"
       /* Specify library files to be included in the compilation. */
     ],
     "declaration": true,
@@ -27,7 +28,6 @@
     /* Import emit helpers from 'tslib'. */
     "isolatedModules": true,
     /* Transpile each file as a separate module (similar to 'ts.transpileModule'). */
-
     /* Strict Type-Checking Options */
     "strict": true,
     "noImplicitAny": true,
@@ -46,8 +46,6 @@
     /* Report error when not all code paths in function return a value. */
     "noFallthroughCasesInSwitch": true,
     /* Report errors for fallthrough cases in switch statement. */
-
-
     /* Module Resolution Options */
     "moduleResolution": "node",
     /* Specify module resolution strategy: 'node' (Node.js) or 'classic' (TypeScript pre-1.6). */
@@ -69,7 +67,7 @@
       "@routes/*": [
         "./routes/*"
       ],
-      "@service/*":[
+      "@service/*": [
         "./service/*"
       ],
       "@utils/*": [
@@ -96,23 +94,19 @@
     /* Enables emit interoperability between CommonJS and ES Modules via creation of namespace objects for all imports. Implies 'allowSyntheticDefaultImports'. */
     "preserveSymlinks": false,
     /* Do not resolve the real path of symlinks. */
-
     /* Source Map Options */
     "sourceRoot": "./src",
     /* Specify the location where debugger should locate TypeScript files instead of source locations. */
     "mapRoot": "./dist",
     /* Specify the location where debugger should locate map files instead of generated locations. */
-
     /* Experimental Options */
     "experimentalDecorators": true,
     /* Enables experimental support for ES7 decorators. */
     "emitDecoratorMetadata": true,
     /* Enables experimental support for emitting type metadata for decorators. */
-
     /* Advanced Options */
     "resolveJsonModule": true,
     /* Include modules imported with '.json' extension */
-
     /* Other Options */
     "forceConsistentCasingInFileNames": true,
     "module": "commonjs"
