@@ -55,10 +55,10 @@ Utiliser le fichier nommé rami1_esp32_AD8232_ecg.ino
 
 Situé dans le dossier sensors-over-mqtt-master/esp32-mqtt/rami1_esp32_AD8232_ecg
 Ajouter deux autres fichiers cpp et deux autres hpp dans le même dossier rami1_esp32_AD8232_ecg :
-MQTTCommonOperations.cpp 
-MQTTCommonOperations.hpp
-SpecificConstants.cpp
-SpecificConstants.hpp
+MQTTCommonOperations.cpp //disponible dans le dossier /all-microcontrollers
+MQTTCommonOperations.hpp //disponible dans le dossier /all-microcontrollers
+SpecificConstants.cpp //disponible dans le dossier /esp32-mqtt
+SpecificConstants.hpp //disponible dans le dossier /esp32-mqtt
 Il faut que les 5 fichiers soient dans le même dossier pour compiler 
 
 Télécharger les librairies suivantes : 
